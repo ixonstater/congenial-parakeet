@@ -1,0 +1,14 @@
+{
+  "name": "alsetlabssite",
+  "version": "1.0.0",
+  "description": "website",
+  "main": "server.js",
+  "scripts": {
+    "test": "test"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "express": "^4.15.4"
+  }
+}
