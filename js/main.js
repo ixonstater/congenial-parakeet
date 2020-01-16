@@ -1,20 +1,47 @@
-import { testStateOne, testStateTwo, testStateThree } from './testing.js'
-
 const BLACK = 2
 const WHITE = 1
+const EMPTY = 0
+const SERVER_IP = 'http://192.168.1.154:8080/'
+
 
 class GameState{
 
     constructor(){
         this.grid
+        this.userCode
+        this.matchCode
+        this.myTurn
+        this.endPoints = {
+            requestMatch: SERVER_IP + 'requestMatch',
+            joinMatch: SERVER_IP + 'joinMatch',
+            submitTurn: SERVER_IP + 'requestTurn',
+            requestState: SERVER_IP + 'requestState'
+        }
     }
 
-    requestNewStone(x,y){
+    async requestMatch(e){
+        let userName = document.getElementById('user-string').value
+        let requestBody = {
+            blackToken: userName
+        }
+        let request = JSON.stringify(requestBody)
+        const resp = await fetch(this.endPoints.requestMatch, {request})
+
+        let jsonResp = await resp.json()
+        console.log(jsonResp)
+    }
+
+    async joinMatch(e){
+        let userName = document.getElementById('user-string').value
+        let accessToken = document.getElementById('access-string').value
+    }
+
+    async submitTurn(){
         
     }
 
-    requestTurn(){
-        
+    async requestState(){
+
     }
 }
 
@@ -129,10 +156,11 @@ class BoardMaker{
 
 function main(){
     let gameInstance = new GameInstance
-    
     let boardMaker = new BoardMaker(gameInstance)
     boardMaker.makeBoard()
-    gameInstance.state.grid = testStateOne()
+
+    document.getElementById('join-match').addEventListener('click', gameInstance.state.joinMatch.bind(gameInstance.state))
+    document.getElementById('request-match').addEventListener('click', gameInstance.state.requestMatch.bind(gameInstance.state))
 }
 
 document.addEventListener('DOMContentLoaded', main)
