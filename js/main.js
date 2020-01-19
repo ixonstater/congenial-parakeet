@@ -8,9 +8,10 @@ class GameState{
 
     constructor(){
         this.grid
-        this.userCode
-        this.matchCode
-        this.myTurn
+        this.userToken
+        this.myColor
+        this.accessToken
+        this.whosTurn
         this.endPoints = {
             requestMatch: SERVER_IP + 'requestMatch',
             joinMatch: SERVER_IP + 'joinMatch',
@@ -19,24 +20,68 @@ class GameState{
         }
     }
 
-    async requestMatch(e){
+    async requestMatch(e, handleUI){
         let userName = document.getElementById('user-string').value
         let requestBody = {
             blackToken: userName
         }
         let request = JSON.stringify(requestBody)
-        const resp = await fetch(this.endPoints.requestMatch, {request})
+        const resp = await fetch(
+            this.endPoints.requestMatch,
+            {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: request
+            })
 
         let jsonResp = await resp.json()
-        console.log(jsonResp)
+        if (jsonResp.length == 5){
+            this.accessToken = jsonResp
+            this.userToken = userName
+            this.whosTurn = BLACK
+            this.myColor = BLACK
+            handleUI()
+        } else {
+            alert('Failed to request match')
+        }
     }
 
-    async joinMatch(e){
+    async joinMatch(e, handleUI){
         let userName = document.getElementById('user-string').value
         let accessToken = document.getElementById('access-string').value
+
+        let requestBody = {
+            whiteToken: userName,
+            accessToken: accessToken
+        }
+        let request = JSON.stringify(requestBody)
+        const resp = await fetch(
+            this.endPoints.joinMatch,
+            {
+                method: 'POST',
+                header: {
+                    'Content-Type': 'application/json'
+                },
+                body: request
+            }
+        )
+
+        let jsonResp = await resp.json()
+        if(jsonResp.length == 5){
+            this.accessToken = jsonResp
+            this.whosTurn = BLACK
+            this.myColor = WHITE
+            this.userToken = userName
+            handleUI()
+        }else {
+            alert('Failed to join match')
+        }
+
     }
 
-    async submitTurn(){
+    async submitTurn(x,y){
         
     }
 
@@ -59,12 +104,15 @@ class GameInstance{
         [x, y] = e.target.dataset.index.split(',').map(i => {
             return parseInt(i, 10)
         })
-        this.updateGameState(x,y)
-        this.handleUI()
+        this.state.submitTurn(x,y)
     }
 
     updateGameState(x,y){
-        this.state.requestNewStone(x,y)
+        this.state.submitTurn(x,y)
+    }
+
+    waitForStateChange(){
+        
     }
 
     handleUI(){
@@ -72,6 +120,14 @@ class GameInstance{
             for (let y = 0; y < 19; y++){
                 this.updateDOMGridIndex(x,y)
             }
+        }
+        let accessTokenP = document.getElementById('access-token')
+        accessTokenP.innerHTML = this.state.accessToken ? 'Access token: ' + this.state.accessToken : ''
+        let userTokenP = document.getElementById('user-token')
+        userTokenP.innerHTML = this.state.userToken ? 'User token: ' + this.state.userToken : ''
+        let whosTurnP = document.getElementById('whos-turn')
+        if(this.state.whosTurn){
+            whosTurnP.innerHTML = (this.state.whosTurn == BLACK) ? 'Black\'s turn' : 'White\'s turn'
         }
     }
 
@@ -110,7 +166,7 @@ class BoardMaker{
     constructor(handler){
         this.handler = handler
         this.offset = 5.18
-        this.startxy = 1.1
+        this.startxy = 1.4
     }
 
     makeBoard(){
@@ -159,8 +215,12 @@ function main(){
     let boardMaker = new BoardMaker(gameInstance)
     boardMaker.makeBoard()
 
-    document.getElementById('join-match').addEventListener('click', gameInstance.state.joinMatch.bind(gameInstance.state))
-    document.getElementById('request-match').addEventListener('click', gameInstance.state.requestMatch.bind(gameInstance.state))
+    document.getElementById('join-match').addEventListener('click', (e) => {
+        gameInstance.state.joinMatch.bind(gameInstance.state)(e, gameInstance.handleUI.bind(gameInstance))
+    })
+    document.getElementById('request-match').addEventListener('click', (e) => {
+        gameInstance.state.requestMatch.bind(gameInstance.state)(e, gameInstance.handleUI.bind(gameInstance))
+    })
 }
 
 document.addEventListener('DOMContentLoaded', main)
