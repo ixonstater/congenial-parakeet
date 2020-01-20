@@ -8,85 +8,87 @@ class GameState{
 
     constructor(){
         this.grid
-        this.userToken
-        this.myColor
+        this.color
         this.accessToken
         this.whosTurn
         this.endPoints = {
             requestMatch: SERVER_IP + 'requestMatch',
-            joinMatch: SERVER_IP + 'joinMatch',
             submitTurn: SERVER_IP + 'requestTurn',
             requestState: SERVER_IP + 'requestState'
         }
     }
 
     async requestMatch(e, handleUI){
-        let userName = document.getElementById('user-string').value
-        let requestBody = {
-            blackToken: userName
+        if(!this.getDataFromUI()){
+            return
         }
-        let request = JSON.stringify(requestBody)
-        const resp = await fetch(
+        const req = await fetch(
             this.endPoints.requestMatch,
             {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
                 },
-                body: request
             })
 
-        let jsonResp = await resp.json()
-        if (jsonResp.length == 5){
-            this.accessToken = jsonResp
-            this.userToken = userName
-            this.whosTurn = BLACK
-            this.myColor = BLACK
-            handleUI()
+        let resp = await req.json()
+        if (resp.length == 5){
+            this.accessToken = resp
         } else {
             alert('Failed to request match')
         }
+        this.requestState()
+        handleUI()
     }
 
     async joinMatch(e, handleUI){
-        let userName = document.getElementById('user-string').value
-        let accessToken = document.getElementById('access-string').value
-
-        let requestBody = {
-            whiteToken: userName,
-            accessToken: accessToken
+        if(!this.getDataFromUI()){
+            return
         }
-        let request = JSON.stringify(requestBody)
-        const resp = await fetch(
-            this.endPoints.joinMatch,
-            {
-                method: 'POST',
-                header: {
-                    'Content-Type': 'application/json'
-                },
-                body: request
-            }
-        )
-
-        let jsonResp = await resp.json()
-        if(jsonResp.length == 5){
-            this.accessToken = jsonResp
-            this.whosTurn = BLACK
-            this.myColor = WHITE
-            this.userToken = userName
-            handleUI()
-        }else {
-            alert('Failed to join match')
-        }
-
+        this.requestState()
+        handleUI()
     }
 
-    async submitTurn(x,y){
+    async submitTurn(e,x,y,handleUI){
         
     }
 
     async requestState(){
+        let stateReq = {
+            accessToken: this.accessToken,
+            whosTurn: this.whosTurn
+        }
+        const req = fetch(
+            this.endPoints.requestState,
+            {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(stateReq)
+            }
+        )
+        let resp = await req.json()
+        if(Object.entries(resp).length === 0){
+            return
+        } else {
+            this.whosTurn = resp.whosTurn
+            this.grid = resp.boardState
+        }
+    }
 
+    getDataFromUI(){
+        let colorInput = document.getElementById('your-color')
+        let accessTokenInput = document.getElementById('access-token')
+        this.color = colorInput.value
+        if(accessTokenInput.value){
+            this.accessToken = accessTokenInput.value
+        }
+        if(this.color == 'white' || this.color == 'black'){
+            return true
+        }
+        alert('Invalid color')
+        return false
     }
 }
 
@@ -95,6 +97,7 @@ class GameInstance{
 
     constructor(){
         this.state = new GameState
+        this.boardIsShowing = false
         this.domGrid
     }
 
@@ -115,7 +118,16 @@ class GameInstance{
         
     }
 
+    showBoardHideButtons(){
+        document.getElementById('board-widget').style = 'display: block'
+        document.getElementById('game-input').style = 'display: none'
+        this.boardIsShowing = true
+    }
+
     handleUI(){
+        if(!this.boardIsShowing){
+            this.showBoardHideButtons()
+        }
         for (let x = 0; x < 19; x++){
             for (let y = 0; y < 19; y++){
                 this.updateDOMGridIndex(x,y)
@@ -123,8 +135,6 @@ class GameInstance{
         }
         let accessTokenP = document.getElementById('access-token')
         accessTokenP.innerHTML = this.state.accessToken ? 'Access token: ' + this.state.accessToken : ''
-        let userTokenP = document.getElementById('user-token')
-        userTokenP.innerHTML = this.state.userToken ? 'User token: ' + this.state.userToken : ''
         let whosTurnP = document.getElementById('whos-turn')
         if(this.state.whosTurn){
             whosTurnP.innerHTML = (this.state.whosTurn == BLACK) ? 'Black\'s turn' : 'White\'s turn'
