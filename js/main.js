@@ -45,15 +45,18 @@ class GameState{
         handleUI()
     }
 
-    async joinMatch(e, handleUI){
+    async joinMatch(e, handleUI, waitForStateChange){
         if(!this.getDataFromUI()){
             return
         }
         await this.requestState()
         handleUI()
+        if(this.whosTurn != this.color){
+            waitForStateChange()
+        }
     }
 
-    async submitTurn(e,x,y,handleUI){
+    async submitTurn(e,x,y,handleUI, waitForStateChange){
         let requestBody = JSON.stringify({
             "x": x,
             "y": y,
@@ -72,13 +75,14 @@ class GameState{
 
         let resp = await req.json()
 
-        if(Object.entries(resp).length === 0){
+        if(resp === '{}'){
             return false
         } else {
             this.whosTurn = resp.whosTurn
             this.grid = resp.boardState
         }
         handleUI()
+        waitForStateChange()
     }
 
     async requestState(){
@@ -98,7 +102,7 @@ class GameState{
         )
         let resp = await req.json()
 
-        if(Object.entries(resp).length === 0){
+        if(resp === '{}'){
             return false
         } else {
             this.whosTurn = resp.whosTurn
@@ -139,15 +143,21 @@ class GameInstance{
         let [x, y] = e.target.dataset.index.split(',').map(i => {
             return parseInt(i, 10)
         })
-        this.state.submitTurn(e, x, y, this.handleUI.bind(this))
+        this.state.submitTurn(e, x, y, this.handleUI.bind(this), this.waitForStateChange.bind(this))
     }
 
     updateGameState(x,y){
         this.state.submitTurn(x,y)
     }
 
-    waitForStateChange(){
-        
+    async waitForStateChange(){
+        let newState = await this.state.requestState()
+        if(newState){
+            this.handleUI()
+        }else {
+            setTimeout(this.waitForStateChange.bind(this), 2000)
+            console.log("Requested")
+        }
     }
 
     showBoardHideButtons(){
@@ -175,10 +185,9 @@ class GameInstance{
 
     updateDOMGridIndex(x,y){
         let color = this.state.grid[x][y]
+        this.clearIndex(x,y)
 
-        if(color == 0){
-            this.removeStone(x,y)
-        } else {
+        if(color != 0){
             this.appendStone(x,y,color)
         }
     }
@@ -194,7 +203,7 @@ class GameInstance{
         this.domGrid[x][y].appendChild(stone)
     }
 
-    removeStone(x,y){
+    clearIndex(x,y){
         if(this.domGrid[x][y].firstChild){
             this.domGrid[x][y].removeChild(this.domGrid[x][y].firstChild)
         }
@@ -258,7 +267,7 @@ function main(){
     boardMaker.makeBoard()
 
     document.getElementById('join-match').addEventListener('click', (e) => {
-        gameInstance.state.joinMatch.bind(gameInstance.state)(e, gameInstance.handleUI.bind(gameInstance))
+        gameInstance.state.joinMatch.bind(gameInstance.state)(e, gameInstance.handleUI.bind(gameInstance), gameInstance.waitForStateChange.bind(gameInstance))
     })
     document.getElementById('request-match').addEventListener('click', (e) => {
         gameInstance.state.requestMatch.bind(gameInstance.state)(e, gameInstance.handleUI.bind(gameInstance))
