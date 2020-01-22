@@ -1,5 +1,5 @@
-const BLACK = 2
-const WHITE = 1
+const BLACK = 1
+const WHITE = 2
 const EMPTY = 0
 const SERVER_IP = 'http://192.168.1.154:8080/'
 
@@ -7,13 +7,13 @@ const SERVER_IP = 'http://192.168.1.154:8080/'
 class GameState{
 
     constructor(){
+        this.whosTurn
         this.grid
         this.color
         this.accessToken
-        this.whosTurn
         this.endPoints = {
             requestMatch: SERVER_IP + 'requestMatch',
-            submitTurn: SERVER_IP + 'requestTurn',
+            submitTurn: SERVER_IP + 'submitTurn',
             requestState: SERVER_IP + 'requestState'
         }
     }
@@ -22,6 +22,10 @@ class GameState{
         if(!this.getDataFromUI()){
             return
         }
+        this.whosTurn = this.color
+        let requestBody = JSON.stringify({
+            whosTurn: this.whosTurn
+        })
         const req = await fetch(
             this.endPoints.requestMatch,
             {
@@ -29,6 +33,7 @@ class GameState{
                 headers: {
                     'Content-Type': 'application/json'
                 },
+                body: requestBody
             })
 
         let resp = await req.json()
@@ -37,7 +42,6 @@ class GameState{
         } else {
             alert('Failed to request match')
         }
-        this.requestState()
         handleUI()
     }
 
@@ -45,46 +49,72 @@ class GameState{
         if(!this.getDataFromUI()){
             return
         }
-        this.requestState()
+        await this.requestState()
         handleUI()
     }
 
     async submitTurn(e,x,y,handleUI){
-        
+        let requestBody = JSON.stringify({
+            "x": x,
+            "y": y,
+            "accessToken": this.accessToken,
+            "whosTurn": this.whosTurn
+        })
+
+        const req = await fetch(
+            this.endPoints.submitTurn,
+            {
+                method: 'POST',
+                'Content-Type': 'application/json',
+                body: requestBody
+            }
+        )
+
+        let resp = await req.json()
+
+        if(Object.entries(resp).length === 0){
+            return false
+        } else {
+            this.whosTurn = resp.whosTurn
+            this.grid = resp.boardState
+        }
+        handleUI()
     }
 
     async requestState(){
-        let stateReq = {
+        let stateReq = JSON.stringify({
             accessToken: this.accessToken,
             whosTurn: this.whosTurn
-        }
-        const req = fetch(
+        })
+        const req = await fetch(
             this.endPoints.requestState,
             {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify(stateReq)
+                body: stateReq
             }
         )
         let resp = await req.json()
+
         if(Object.entries(resp).length === 0){
-            return
+            return false
         } else {
             this.whosTurn = resp.whosTurn
             this.grid = resp.boardState
+            return true
         }
     }
 
     getDataFromUI(){
         let colorInput = document.getElementById('your-color')
         let accessTokenInput = document.getElementById('access-token')
-        this.color = colorInput.value
         if(accessTokenInput.value){
             this.accessToken = accessTokenInput.value
         }
-        if(this.color == 'white' || this.color == 'black'){
+        if(colorInput.value == 'white' || colorInput.value == 'black'){
+            this.color = colorInput.value == 'white' ? WHITE : BLACK
             return true
         }
         alert('Invalid color')
@@ -102,12 +132,14 @@ class GameInstance{
     }
 
     boardClicked(e){
-        let x
-        let y
-        [x, y] = e.target.dataset.index.split(',').map(i => {
+        if(this.state.color != this.state.whosTurn){
+            return
+        }
+
+        let [x, y] = e.target.dataset.index.split(',').map(i => {
             return parseInt(i, 10)
         })
-        this.state.submitTurn(x,y)
+        this.state.submitTurn(e, x, y, this.handleUI.bind(this))
     }
 
     updateGameState(x,y){
@@ -133,7 +165,7 @@ class GameInstance{
                 this.updateDOMGridIndex(x,y)
             }
         }
-        let accessTokenP = document.getElementById('access-token')
+        let accessTokenP = document.getElementById('access-token-display')
         accessTokenP.innerHTML = this.state.accessToken ? 'Access token: ' + this.state.accessToken : ''
         let whosTurnP = document.getElementById('whos-turn')
         if(this.state.whosTurn){
