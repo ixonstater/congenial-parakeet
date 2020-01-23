@@ -1,6 +1,7 @@
 const BLACK = 1
 const WHITE = 2
 const EMPTY = 0
+const MAX_STATE_REQUESTS = 345
 const SERVER_IP = 'http://192.168.1.154:8080/'
 
 
@@ -11,6 +12,7 @@ class GameState{
         this.grid
         this.color
         this.accessToken
+        this.requestStateTotal = 0
         this.endPoints = {
             requestMatch: SERVER_IP + 'requestMatch',
             submitTurn: SERVER_IP + 'submitTurn',
@@ -118,7 +120,7 @@ class GameState{
             this.accessToken = accessTokenInput.value
         }
         if(colorInput.value == 'white' || colorInput.value == 'black'){
-            this.color = colorInput.value == 'white' ? WHITE : BLACK
+            this.color = (colorInput.value == 'white') ? WHITE : BLACK
             return true
         }
         alert('Invalid color')
@@ -154,9 +156,21 @@ class GameInstance{
         let newState = await this.state.requestState()
         if(newState){
             this.handleUI()
-        }else {
+        }
+        
+        else if(this.state.requestStateTotal > MAX_STATE_REQUESTS){
+            let wait = await confirm("You're opponent has been gone for a while, want to continue waiting?")
+            if(wait){
+                this.requestStateTotal = 0
+                setTimeout(this.waitForStateChange.bind(this), 2000)
+            } else {
+                location.reload()
+            }
+        }
+
+        else {
+            this.state.requestStateTotal++
             setTimeout(this.waitForStateChange.bind(this), 2000)
-            console.log("Requested")
         }
     }
 
@@ -181,6 +195,8 @@ class GameInstance{
         if(this.state.whosTurn){
             whosTurnP.innerHTML = (this.state.whosTurn == BLACK) ? 'Black\'s turn' : 'White\'s turn'
         }
+        let myColorP = document.getElementById('my-color')
+        myColorP.innerHTML = (this.state.color == BLACK) ? 'You are black' : 'You are white'
     }
 
     updateDOMGridIndex(x,y){
