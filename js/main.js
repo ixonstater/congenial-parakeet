@@ -140,6 +140,9 @@ class GameInstance{
     boardClicked(e){
         if(this.state.color != this.state.whosTurn){
             return
+        } else if (e.target.tagName !== 'DIV'){
+            alert ('There\'s already a stone there')
+            return
         }
 
         let [x, y] = e.target.dataset.index.split(',').map(i => {
