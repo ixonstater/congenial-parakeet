@@ -1,8 +1,10 @@
 const BLACK = 1
 const WHITE = 2
 const EMPTY = 0
-const SERVER_IP = 'http://codefordays.io:8080/'
-const MAX_STATE_REQUESTS = 345
+// const SERVER_IP = 'http://codefordays.io:8080/'
+const SERVER_IP = 'http://192.168.1.154:8080/'
+// const MAX_STATE_REQUESTS = 345
+const MAX_STATE_REQUESTS = 3
 
 
 class GameState{
@@ -12,7 +14,6 @@ class GameState{
         this.grid
         this.color
         this.accessToken
-        this.requestStateTotal = 0
         this.endPoints = {
             requestMatch: SERVER_IP + 'requestMatch',
             submitTurn: SERVER_IP + 'submitTurn',
@@ -135,6 +136,7 @@ class GameInstance{
         this.state = new GameState
         this.boardIsShowing = false
         this.domGrid
+        this.requestStateTotal = 0
     }
 
     boardClicked(e){
@@ -159,10 +161,11 @@ class GameInstance{
         let newState = await this.state.requestState()
         if(newState){
             this.handleUI()
+            this.requestStateTotal = 0
         }
         
-        else if(this.state.requestStateTotal > MAX_STATE_REQUESTS){
-            let wait = await confirm("You're opponent has been gone for a while, want to continue waiting?")
+        else if(this.requestStateTotal > MAX_STATE_REQUESTS){
+            let wait = confirm("You're opponent has been gone for a while, want to continue waiting?")
             if(wait){
                 this.requestStateTotal = 0
                 setTimeout(this.waitForStateChange.bind(this), 2000)
@@ -172,7 +175,7 @@ class GameInstance{
         }
 
         else {
-            this.state.requestStateTotal++
+            this.requestStateTotal++
             setTimeout(this.waitForStateChange.bind(this), 2000)
         }
     }
