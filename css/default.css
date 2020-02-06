@@ -27,3 +27,7 @@
 .display-info{
     display: inline;
 }
+
+.previous-move{
+    background-color: black;
+}

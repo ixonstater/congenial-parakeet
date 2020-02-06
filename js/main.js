@@ -4,7 +4,7 @@ const EMPTY = 0
 // const SERVER_IP = 'http://codefordays.io:8080/'
 const SERVER_IP = 'http://192.168.1.154:8080/'
 // const MAX_STATE_REQUESTS = 345
-const MAX_STATE_REQUESTS = 3
+const MAX_STATE_REQUESTS = 100
 
 
 class GameState{
@@ -12,6 +12,7 @@ class GameState{
     constructor(){
         this.whosTurn
         this.grid
+        this.previousMove
         this.color
         this.accessToken
         this.endPoints = {
@@ -108,8 +109,9 @@ class GameState{
         if(resp === '{}'){
             return false
         } else {
-            this.whosTurn = resp.whosTurn
-            this.grid = resp.boardState
+            this.whosTurn = resp.state.whosTurn
+            this.grid = resp.state.boardState
+            this.previousMove = resp.previousMove
             return true
         }
     }
@@ -136,6 +138,7 @@ class GameInstance{
         this.state = new GameState
         this.boardIsShowing = false
         this.domGrid
+        this.previousIndex = null
         this.requestStateTotal = 0
     }
 
@@ -203,6 +206,7 @@ class GameInstance{
         }
         let myColorP = document.getElementById('my-color')
         myColorP.innerHTML = (this.state.color == BLACK) ? 'You are black' : 'You are white'
+        this.markPreviousTurn(this.state.previousMove)
     }
 
     updateDOMGridIndex(x,y){
@@ -216,13 +220,30 @@ class GameInstance{
 
     appendStone(x, y, color){
         let stone = document.createElement('img')
-        stone.classname = 'board-piece'
+        stone.className = 'board-piece'
         if(color == WHITE){
             stone.src = 'resources/images/white_piece.svg'
         } else if(color == BLACK){
             stone.src = 'resources/images/black_piece.svg'
         }
         this.domGrid[x][y].appendChild(stone)
+    }
+
+    markPreviousTurn(previousMove){
+        if(!previousMove){
+            return
+        }
+        
+        let x = previousMove[0]
+        let y = previousMove[1]
+        if (!this.previousIndex){
+            this.domGrid[x][y].className = 'grid-index previous-move'
+            this.previousIndex = this.domGrid[x,y]
+        }
+
+        this.previousIndex.className = 'grid-index'
+        this.previousIndex = this.domGrid[x][y]
+        this.previousIndex.className = 'grid-index previous-move'
     }
 
     clearIndex(x,y){
