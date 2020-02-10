@@ -1,7 +1,7 @@
 const BLACK = 1
 const WHITE = 2
 const EMPTY = 0
-// const SERVER_IP = 'http://codefordays.io:8080/'
+// const SERVER_IP = 'http://codefordays.io/'
 const SERVER_IP = 'http://192.168.1.154:8080/'
 // const MAX_STATE_REQUESTS = 345
 const MAX_STATE_REQUESTS = 100
